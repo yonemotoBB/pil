@@ -2,14 +2,6 @@
 
 [toc]
 
-## 章ごとの分割
-
-各章の本文は個別のMarkdownファイルに分けました。以下のリンクから各章を開けます。
-
-- [第一章](chapters/01_第一章.md)
-- [第四章](chapters/04_第四章.md)
-- [第六章](chapters/06_第六章.md)
-
 ### 用語
 |||
 |-|-|
@@ -79,12 +71,7 @@ International Civi Aviation Organization
 * [航空法](https://www.schedule-coordination.jp/archives/arc_aviation_law/2009/Civil%20Aeronautics%20Act%20in%20JPN.pdf)
 * [航空法施行規則](https://laws.e-gov.go.jp/law/327M50000800056)
 
-## 章ごとの本文
-
-各章の本文は個別のMarkdownファイルに分けました。以下のリンクから参照できます。
-
+## 各章
 - [第一章](chapters/01_第一章.md)
 - [第四章](chapters/04_第四章.md)
 - [第六章](chapters/06_第六章.md)
-
-このページは目次・リンク集として整理しています。
