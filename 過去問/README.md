@@ -1,6 +1,6 @@
 # 自家用操縦士（飛・回） 学科試験 過去問インデックス
 
-国土交通省 航空局が公開する[学科試験 過去問](https://www.mlit.go.jp/koku/koku_fr10_000025.html)を年度ごとにMarkdown化したもの。
+国土交通省 航空局が公開する[学科試験 過去問](https://www.mlit.go.jp/koku/koku_fr10_000025.html)を年度ごとにMarkdown化したもの。各ファイル冒頭の `[TOC]` から各期・各学科へ移動できます（HackMD）。
 
 ## 年度別
 
