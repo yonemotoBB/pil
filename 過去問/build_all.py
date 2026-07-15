@@ -168,6 +168,26 @@ def ocr_choice(line,exp):
     return None
 def ocr_clean(s):
     return s.replace('どれかが','どれか').replace('はどれか。','はどれか。')
+
+# OCRで拾えなかった4問(スキャン画像 p8/p14/p15/p24 から転記)
+OCR_EXTRA={
+ ('met',19):{'stem':'850hPa天気図の説明で誤りはどれか。','choices':[
+   '対流圏の中間層にあたり、大気の流れを知るために最適である。',
+   'この高さの湿った暖気移流は雨の予報に利用される。',
+   '山岳地帯を除けば気象要素は下層大気の代表的な値を示す。',
+   '前線系の解析に最適である。']},
+ ('eng-r',4):{'stem':'ロータ・ハブ型式のうち、全関節型ハブが有するヒンジで誤りはどれか。','choices':[
+   'フェザリング・ヒンジ','フラップ・ヒンジ','ドラッグ・ヒンジ','デルタスリー・ヒンジ']},
+ ('eng-r',10):{'stem':'ダイナミック・ロール・オーバーに関する記述で誤りはどれか。','choices':[
+   'ダイナミック・ロール・オーバーとは、片方の降着装置が接地したまま、機体がこの接地点周りに旋転する状態をいう。',
+   'ダイナミック・ロール・オーバーの経過時間は極めて短時間であるため、これに関する知識がなければリカバリーは不可能といわれている。',
+   '不整地や柔らかな地面での離着陸はダイナミック・ロール・オーバーによる転覆の可能性が高くなる。',
+   '低い重心位置での離着陸はダイナミック・ロール・オーバーによる転覆の可能性が高くなる。']},
+ ('nav',13):{'stem':'TH270度で飛行中、15 nm飛行して0.5 nm右側にオフコースした。このときのDAとして正しいものはどれか。ただし、WCAは0度とする。','choices':[
+   '1度R','2度R','1度L','2度L']},
+}
+# 図を含む問 → スキャンページ番号
+OCR_FIGS={('met',20):8,('eng-r',5):14,('eng-r',6):14,('nav',1):23,('nav',15):25}
 def parse_ocr(subj_pages):
     lines=[]
     for p in range(subj_pages[0],subj_pages[1]+1):
@@ -178,6 +198,7 @@ def parse_ocr(subj_pages):
         line=raw.strip()
         if not line: continue
         if '航空従事者' in line or re.match(r'^自操|^共通',line): continue
+        if re.search(r'[ー一\-]{8,}',line): continue  # スキャンノイズ行
         mq=re.match(r'^\s*[問間商固]\s*([0-9０-９OoＯｏ]{1,3})\s*(.*)$',line)
         n=None
         if mq:
@@ -188,7 +209,9 @@ def parse_ocr(subj_pages):
             qs.append(q);exp=1;continue
         if q is not None and exp<=4:
             rest=ocr_choice(line,exp)
-            if rest is not None: q['choices'].append(ocr_clean(rest.strip()));exp+=1;continue
+            if rest is not None:
+                rest=re.sub(r'^[①②③④]?\s*[)）]\s*','',rest.strip())  # 「③)」等の重複マーカー除去
+                q['choices'].append(ocr_clean(rest));exp+=1;continue
         if q is not None:
             if q['choices']: q['choices'][-1]+=ocr_clean(line)
             else: q['stem']+=ocr_clean(line)
@@ -196,7 +219,24 @@ def parse_ocr(subj_pages):
 def ocr_subjects():
     subs=[]
     for cover,name,code,pcode,pr in OCR_COVERS:
-        subs.append({'name':name,'code':code,'pcode':pcode,'questions':parse_ocr(pr),'notes':[]})
+        qs=parse_ocr(pr)
+        for q in qs:
+            q.setdefault('pages',set())
+        # 「問2O」→問2 誤認識の補正: 直前が問19なら問20
+        for i in range(1,len(qs)):
+            if qs[i-1]['num']==19 and qs[i]['num']<19: qs[i]['num']=20
+        # 欠落問を挿入(スキャン画像から転記)
+        for (c,n),data in OCR_EXTRA.items():
+            if c==code and not any(q['num']==n for q in qs):
+                qs.append({'num':n,'stem':data['stem'],'choices':list(data['choices']),'pages':set()})
+        qs.sort(key=lambda q:q['num'])
+        # 図付き問へページ画像を添付
+        for (c,n),pno in OCR_FIGS.items():
+            if c==code:
+                for q in qs:
+                    if q['num']==n: q['pages'].add(pno)
+        notes=[(1,'下表はＡ空港から変針点Ｂ、Ｃを経由してＤ空港に至る未完成の航法ログである。問１から問６について解答せよ。')] if code=='nav' else []
+        subs.append({'name':name,'code':code,'pcode':pcode,'questions':qs,'notes':notes})
     return subs
 
 def render_pages(doc,slug,pages):
@@ -236,6 +276,8 @@ def session_md(pid,label,slug):
         lines.append('> ⚠ この期の原本はスキャン画像PDFのため、**OCR（自動文字認識）で作成**しています。誤字・脱字が含まれる可能性があります。正確な内容は原本PDFをご確認ください。\n')
         allpg=set()
         for s in subjects: allpg|=emit_subject(lines,slug,s,ans)
+        doc=fitz.open(os.path.join(PDFDIR,'001302114.pdf'))
+        render_pages(doc,slug,allpg)
         return '\n'.join(lines)+'\n', [(s['name'],s['code']) for s in subjects], \
                {'q':sum(len(s['questions']) for s in subjects)}
     doc,subjects=parse_pdf(pid)
