@@ -103,8 +103,16 @@ def parse_pdf(pid):
             if re.match(r'^自操|^共通',nfkc(line).replace(' ','')): continue
             mq=Q_RE.match(line); mc=CH_RE.match(line)
             false_q=mq and re.match(r'^から',mq.group(2))
+            qnum=None
             if mq and not false_q:
-                q={'num':int(nfkc(mq.group(1))),'stem':mq.group(2).strip(),'choices':[],'pages':set()}
+                qnum=int(nfkc(mq.group(1)))
+                if qnum>20:
+                    # 「問 2020」のようにラベルが二重埋め込みされたPDF対策(h30-07気象問20)
+                    s=str(qnum)
+                    if len(s)%2==0 and s[:len(s)//2]==s[len(s)//2:]: qnum=int(s[:len(s)//2])
+                    else: qnum=None
+            if qnum is not None:
+                q={'num':qnum,'stem':mq.group(2).strip(),'choices':[],'pages':set()}
                 cur['questions'].append(q);page_qs.append(q);ctx='stem'
             elif mc and q is not None:
                 q['choices'].append(mc.group(2).strip());ctx='choice'
@@ -120,7 +128,32 @@ def parse_pdf(pid):
         if preamble:
             prose=[l for l in preamble if l.endswith('。') or 'について解答' in l]
             if prose and page_qs: cur['notes'].append((page_qs[0]['num'],' '.join(prose)))
+    for s in subjects:
+        for q in s['questions']: post_fix(q)
     return doc,subjects
+
+def post_fix(q):
+    """図が選択肢テキストに食い込む定型問を原本画像で確認済みの正しい内容に置換。
+    (安定性・馬力・TEMは全期で同一の並びであることを各期のページ画像で確認済み)"""
+    stem=q['stem']; n=len(q['choices'])
+    if '右図の安定性に関する記述' in stem and n!=4:
+        q['stem']='右図の安定性に関する記述で正しいものはどれか。'
+        q['choices']=['静的には安定、動的には不安定','静的には不安定、動的にも不安定',
+                      '静的には安定、動的にも安定','静的には不安定、動的には安定']
+    elif '馬力と前進速度との関係' in stem and n!=4:
+        q['stem']='下図は馬力と前進速度との関係を示した一例である。①～④のうち、全必要パワーを示しているものはどれか。'
+        q['choices']=['①','②','③','④']
+    elif 'スレット・アンド・エラー' in stem and n!=4:
+        # 注意: この置換はr4-11/r5-03/r5-07の3期(選択肢が正誤表で乱れる)のみ対象。
+        # 同じTEM題材でも(a)(b)本文・選択肢並びが異なる期がある(例:r1-11は①正正～④誤誤)ため
+        # 正常にパースできた期には適用しない。
+        q['stem']=('TEM（スレット・アンド・エラー・マネージメント）に関する次の文（ａ）、（ｂ）'
+                   'について、その正誤の組み合わせとして正しいものはどれか。\n\n'
+                   '（ａ）スレットは、乗員が関与するところで発生し、運航をさらに複雑にし、'
+                   '安全マージンを維持するために、乗員に注意や対処を要求するものをいう。\n'
+                   '（ｂ）エラーは、乗員自身、または組織の意図や期待から逸脱し、安全マージンを'
+                   '減少させ、運航を悪化させる事態が発生する可能性を高めるものをいう。')
+        q['choices']=['（ａ）誤　（ｂ）誤','（ａ）誤　（ｂ）正','（ａ）正　（ｂ）誤','（ａ）正　（ｂ）正']
 
 # ---- OCRセッション（令和元年7月 スキャンPDF）----
 # P##科目記号は全期共通: 通信P18 気象P21 工学飛P23 工学回P24 法規P27 航法P29
