@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import fitz, re, os, unicodedata, urllib.parse
 
-PDFDIR='/tmp/kakomon'; OCRDIR='/tmp/ocr'
+PDFDIR='/tmp/kakomon'; OCRDIR='/tmp/ocr'; ANSDIR='/tmp/kaito'
 OUTDIR='/home/fogbi/pil/過去問'
 IMGDIR=os.path.join(OUTDIR,'images')
 os.makedirs(IMGDIR,exist_ok=True)
@@ -41,6 +41,31 @@ CH_RE=re.compile(r'^（\s*([１-４1-4])\s*）\s*(.*)$')
 CIRCLED=['①','②','③','④']
 def nfkc(s): return unicodedata.normalize('NFKC',s)
 
+def answers(slug):
+    """解答PDFから {P##: [20解答]} を座標グリッドで抽出"""
+    apdf=os.path.join(ANSDIR,f'{slug}.pdf')
+    if not os.path.exists(apdf): return {}
+    d=fitz.open(apdf); result={}
+    for pi in range(d.page_count):
+        words=d[pi].get_text('words')
+        digs=[(w[0],w[1],w[4]) for w in words if re.fullmatch(r'[1-5]',w[4])]
+        heads=[(w[0],w[1],nfkc(w[4])) for w in words if re.fullmatch(r'P[0-9]{1,2}',nfkc(w[4]))]
+        for hx,hy,lab in heads:
+            col=sorted([(y,t) for x,y,t in digs if abs(x-hx)<9 and hy+2<y<hy+2+21*16],key=lambda z:z[0])
+            seq=[t for _,t in col][:20]
+            if len(seq)>=18 and lab not in result: result[lab]=seq
+    return result
+
+def cover_pcode(page):
+    """問題用紙cover右上のP##科目記号"""
+    w,h=page.rect.width,page.rect.height
+    for b in page.get_text('words'):
+        x0,y0,txt=b[0],b[1],nfkc(b[4])
+        if x0>w*0.45 and y0<h*0.22:
+            m=re.search(r'P[0-9]{1,2}',txt)
+            if m: return m.group(0)
+    return None
+
 def is_cover(t):
     if not t.strip(): return False
     return '航空従事者学科試験問題' in re.sub(r'\s','',t.splitlines()[0])
@@ -68,7 +93,7 @@ def parse_pdf(pid):
         pno=i+1; text=doc[i].get_text(sort=True)
         if is_cover(text):
             subj,res=parse_cover(text); name,code=subject_display(subj or '',res or '')
-            cur={'name':name,'code':code,'questions':[],'notes':[]}; subjects.append(cur); continue
+            cur={'name':name,'code':code,'pcode':cover_pcode(doc[i]),'questions':[],'notes':[]}; subjects.append(cur); continue
         if cur is None: continue
         has_img=len(doc[i].get_images())>0
         q=None;ctx=None;preamble=[];page_qs=[]
@@ -98,9 +123,10 @@ def parse_pdf(pid):
     return doc,subjects
 
 # ---- OCRセッション（令和元年7月 スキャンPDF）----
-OCR_COVERS=[(1,'航空通信','com',(2,4)),(5,'航空気象','met',(6,8)),
-            (9,'航空工学（飛行機）','eng-a',(10,12)),(13,'航空工学（回転翼）','eng-r',(14,17)),
-            (18,'航空法規','law',(19,21)),(22,'空中航法','nav',(23,26))]
+# P##科目記号は全期共通: 通信P18 気象P21 工学飛P23 工学回P24 法規P27 航法P29
+OCR_COVERS=[(1,'航空通信','com','P18',(2,4)),(5,'航空気象','met','P21',(6,8)),
+            (9,'航空工学（飛行機）','eng-a','P23',(10,12)),(13,'航空工学（回転翼）','eng-r','P24',(14,17)),
+            (18,'航空法規','law','P27',(19,21)),(22,'空中航法','nav','P29',(23,26))]
 def ocr_choice(line,exp):
     c=CIRCLED[exp-1]
     for p in (rf'^\s*[（(]?\s*{c}\s*[）)]?\s*(.*)',rf'^\s*[（(]\s*{exp}\s*[）)]?\s*(.*)',rf'^\s*{exp}\s*[）)]\s*(.*)'):
@@ -136,8 +162,8 @@ def parse_ocr(subj_pages):
     return qs
 def ocr_subjects():
     subs=[]
-    for cover,name,code,pr in OCR_COVERS:
-        subs.append({'name':name,'code':code,'questions':parse_ocr(pr),'notes':[]})
+    for cover,name,code,pcode,pr in OCR_COVERS:
+        subs.append({'name':name,'code':code,'pcode':pcode,'questions':parse_ocr(pr),'notes':[]})
     return subs
 
 def render_pages(doc,slug,pages):
@@ -145,10 +171,11 @@ def render_pages(doc,slug,pages):
         out=os.path.join(IMGDIR,f'{slug}_p{pno:02d}.png')
         if not os.path.exists(out): doc[pno-1].get_pixmap(dpi=120).save(out)
 
-def emit_subject(lines,slug,s):
+def emit_subject(lines,slug,s,ans):
     lines.append(f'### {s["name"]}\n')
     notes={}
     for qn,tx in s['notes']: notes.setdefault(qn,[]).append(tx)
+    seq=ans.get(s.get('pcode')) if s.get('pcode') else None
     pages=set()
     for q in s['questions']:
         for tx in notes.get(q['num'],[]): lines.append(f'> {tx.strip()}（表・図は下の画像参照）\n')
@@ -161,23 +188,27 @@ def emit_subject(lines,slug,s):
             mark=CIRCLED[idx] if idx<4 else f'({idx+1})'
             lines.append(f'- [ ] {mark} {c}')
         lines.append('')
+        if seq and 1<=q['num']<=len(seq):
+            lines.append(':::spoiler 正答')
+            lines.append(seq[q['num']-1])
+            lines.append(':::\n')
     return pages
 
 def session_md(pid,label,slug):
-    url=src_url(pid)
+    url=src_url(pid); ans=answers(slug)
     if slug=='r1-07':
         subjects=ocr_subjects()
         lines=[f'## {label}期\n']
-        lines.append(f'原本PDF: <{url}>\n')
+        lines.append(f'原本PDF: <{url}>（解答: <https://www.mlit.go.jp/common/001301067.pdf>）\n')
         lines.append('> ⚠ この期の原本はスキャン画像PDFのため、**OCR（自動文字認識）で作成**しています。誤字・脱字が含まれる可能性があります。正確な内容は原本PDFをご確認ください。\n')
         allpg=set()
-        for s in subjects: allpg|=emit_subject(lines,slug,s)
+        for s in subjects: allpg|=emit_subject(lines,slug,s,ans)
         return '\n'.join(lines)+'\n', [(s['name'],s['code']) for s in subjects], \
                {'q':sum(len(s['questions']) for s in subjects)}
     doc,subjects=parse_pdf(pid)
     lines=[f'## {label}期\n', f'原本PDF: <{url}>\n']
     allpg=set()
-    for s in subjects: allpg|=emit_subject(lines,slug,s)
+    for s in subjects: allpg|=emit_subject(lines,slug,s,ans)
     render_pages(doc,slug,allpg)
     return '\n'.join(lines)+'\n', [(s['name'],s['code']) for s in subjects], \
            {'q':sum(len(s['questions']) for s in subjects)}
@@ -194,6 +225,7 @@ for nendo in NENDO_ORDER:
     fname=f'自家用操縦士_{nendo}.md'; nendo_files[nendo]=fname
     out=[f'# 自家用操縦士 学科試験 過去問（{nendo}）\n']
     out.append('出典: 国土交通省 航空局 [過去問一覧](https://www.mlit.go.jp/koku/koku_fr10_000025.html)　各科目20題・1問5点・70点以上で合格。\n')
+    out.append('各設問の選択肢はチェックボックス、**正答は「正答」の折りたたみ**（HackMDでクリックで開く）です。\n')
     out.append('[TOC]\n')
     out.append('---\n')
     for sk,slug,label,md,subs in items:
