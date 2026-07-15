@@ -66,6 +66,25 @@ def cover_pcode(page):
             if m: return m.group(0)
     return None
 
+def marker_ys(page):
+    """ページ内の「問N」ラベルの(番号,y座標)一覧"""
+    out=[]
+    d=page.get_text('dict')
+    for blk in d['blocks']:
+        if blk.get('type')!=0: continue
+        for ln in blk['lines']:
+            txt=''.join(sp['text'] for sp in ln['spans']).strip()
+            m=re.match(r'^問\s*([0-9０-９]+)\s*(.*)',txt)
+            if not m: continue
+            if re.match(r'^から',m.group(2)): continue  # 「問１から問６について…」は前文
+            n=int(nfkc(m.group(1)))
+            if n>20:
+                t=str(n)
+                if len(t)%2==0 and t[:len(t)//2]==t[len(t)//2:]: n=int(t[:len(t)//2])
+                else: continue
+            if 1<=n<=20: out.append((n,ln['bbox'][1]))
+    return sorted(out,key=lambda z:z[1])
+
 def is_cover(t):
     if not t.strip(): return False
     return '航空従事者学科試験問題' in re.sub(r'\s','',t.splitlines()[0])
@@ -122,9 +141,20 @@ def parse_pdf(pid):
                 else: q['stem']+=line
         kw_qs=[qq for qq in page_qs if FIG_KW.search(qq['stem'])]
         pre_fig=preamble and FIG_KW.search(''.join(preamble))
-        for qq in kw_qs: qq['pages'].add(pno)
-        if pre_fig and page_qs: page_qs[0]['pages'].add(pno)
-        if has_img and not kw_qs and not pre_fig and page_qs: page_qs[-1]['pages'].add(pno)
+        mklist=marker_ys(doc[i]); ph=doc[i].rect.height
+        def band(qnum):
+            """問qnumの帯(y0,y1)。図を含む設問領域だけを切り出すため"""
+            ys=[y for n,y in mklist if n==qnum]
+            if not ys: return (45, ph-60)  # マーカー無し(継続ページ)はフッター除く全体
+            y0=min(ys)
+            after=[y for n,y in mklist if y>y0+2]
+            return (max(40,y0-8), (min(after)-6) if after else ph-60)
+        for qq in kw_qs: qq.setdefault('clips',[]).append((pno,)+band(qq['num']))
+        if pre_fig and page_qs:
+            y1=(mklist[0][1]-6) if mklist else ph-60
+            page_qs[0].setdefault('clips',[]).append((pno,40,y1))
+        if has_img and not kw_qs and not pre_fig and page_qs:
+            page_qs[-1].setdefault('clips',[]).append((pno,)+band(page_qs[-1]['num']))
         if preamble:
             prose=[l for l in preamble if l.endswith('。') or 'について解答' in l]
             if prose and page_qs: cur['notes'].append((page_qs[0]['num'],' '.join(prose)))
@@ -186,8 +216,9 @@ OCR_EXTRA={
  ('nav',13):{'stem':'TH270度で飛行中、15 nm飛行して0.5 nm右側にオフコースした。このときのDAとして正しいものはどれか。ただし、WCAは0度とする。','choices':[
    '1度R','2度R','1度L','2度L']},
 }
-# 図を含む問 → スキャンページ番号
-OCR_FIGS={('met',20):8,('eng-r',5):14,('eng-r',6):14,('nav',1):23,('nav',15):25}
+# 図を含む問 → (スキャンページ, y開始率, y終了率)  ※スキャン画像を目視で決定
+OCR_FIGS={('met',20):(8,0.43,0.54),('eng-r',5):(14,0.515,0.66),('eng-r',6):(14,0.645,0.87),
+          ('nav',1):(23,0.09,0.26),('nav',15):(25,0.095,0.21)}
 def parse_ocr(subj_pages):
     lines=[]
     for p in range(subj_pages[0],subj_pages[1]+1):
@@ -230,32 +261,37 @@ def ocr_subjects():
             if c==code and not any(q['num']==n for q in qs):
                 qs.append({'num':n,'stem':data['stem'],'choices':list(data['choices']),'pages':set()})
         qs.sort(key=lambda q:q['num'])
-        # 図付き問へページ画像を添付
-        for (c,n),pno in OCR_FIGS.items():
+        # 図付き問へ設問領域のclipを添付
+        _doc=fitz.open(os.path.join(PDFDIR,'001302114.pdf'))
+        for (c,n),(pno,f0,f1) in OCR_FIGS.items():
             if c==code:
+                ph=_doc[pno-1].rect.height
                 for q in qs:
-                    if q['num']==n: q['pages'].add(pno)
+                    if q['num']==n: q.setdefault('clips',[]).append((pno,ph*f0,ph*f1))
         notes=[(1,'下表はＡ空港から変針点Ｂ、Ｃを経由してＤ空港に至る未完成の航法ログである。問１から問６について解答せよ。')] if code=='nav' else []
         subs.append({'name':name,'code':code,'pcode':pcode,'questions':qs,'notes':notes})
     return subs
 
-def render_pages(doc,slug,pages):
-    for pno in sorted(pages):
-        out=os.path.join(IMGDIR,f'{slug}_p{pno:02d}.png')
-        if not os.path.exists(out): doc[pno-1].get_pixmap(dpi=120).save(out)
+def render_clips(doc,jobs):
+    for fname,pno,y0,y1 in jobs:
+        out=os.path.join(IMGDIR,fname)
+        p=doc[pno-1]; w=p.rect.width
+        clip=fitz.Rect(22,y0,w-18,y1)
+        p.get_pixmap(dpi=150,clip=clip).save(out)
 
 def emit_subject(lines,slug,s,ans):
     lines.append(f'### {s["name"]}\n')
     notes={}
     for qn,tx in s['notes']: notes.setdefault(qn,[]).append(tx)
     seq=ans.get(s.get('pcode')) if s.get('pcode') else None
-    pages=set()
+    jobs=[]
     for q in s['questions']:
         for tx in notes.get(q['num'],[]): lines.append(f'> {tx.strip()}（表・図は下の画像参照）\n')
         lines.append(f'**問{q["num"]}**\n')
         lines.append(q['stem']+'\n')
-        for pno in sorted(q['pages']):
-            fname=f'{slug}_p{pno:02d}.png'; pages.add(pno)
+        for pno,y0,y1 in sorted(q.get('clips',[])):
+            fname=f'{slug}_p{pno:02d}_q{q["num"]}.png'
+            jobs.append((fname,pno,y0,y1))
             lines.append(f'![問{q["num"]}の図]({rawurl(fname)})\n')
         for idx,c in enumerate(q['choices']):
             mark=CIRCLED[idx] if idx<4 else f'({idx+1})'
@@ -265,7 +301,7 @@ def emit_subject(lines,slug,s,ans):
             lines.append(':::spoiler 正答')
             lines.append(seq[q['num']-1])
             lines.append(':::\n')
-    return pages
+    return jobs
 
 def session_md(pid,label,slug):
     url=src_url(pid); ans=answers(slug)
@@ -274,17 +310,17 @@ def session_md(pid,label,slug):
         lines=[f'## {label}期\n']
         lines.append(f'原本PDF: <{url}>（解答: <https://www.mlit.go.jp/common/001301067.pdf>）\n')
         lines.append('> ⚠ この期の原本はスキャン画像PDFのため、**OCR（自動文字認識）で作成**しています。誤字・脱字が含まれる可能性があります。正確な内容は原本PDFをご確認ください。\n')
-        allpg=set()
-        for s in subjects: allpg|=emit_subject(lines,slug,s,ans)
+        jobs=[]
+        for s in subjects: jobs+=emit_subject(lines,slug,s,ans)
         doc=fitz.open(os.path.join(PDFDIR,'001302114.pdf'))
-        render_pages(doc,slug,allpg)
+        render_clips(doc,jobs)
         return '\n'.join(lines)+'\n', [(s['name'],s['code']) for s in subjects], \
                {'q':sum(len(s['questions']) for s in subjects)}
     doc,subjects=parse_pdf(pid)
     lines=[f'## {label}期\n', f'原本PDF: <{url}>\n']
-    allpg=set()
-    for s in subjects: allpg|=emit_subject(lines,slug,s,ans)
-    render_pages(doc,slug,allpg)
+    jobs=[]
+    for s in subjects: jobs+=emit_subject(lines,slug,s,ans)
+    render_clips(doc,jobs)
     return '\n'.join(lines)+'\n', [(s['name'],s['code']) for s in subjects], \
            {'q':sum(len(s['questions']) for s in subjects)}
 
