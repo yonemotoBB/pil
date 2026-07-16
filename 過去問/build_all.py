@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import fitz, re, os, unicodedata, urllib.parse
+import fitz, re, os, unicodedata, urllib.parse, json
 
 PDFDIR='/tmp/kakomon'; OCRDIR='/tmp/ocr'; ANSDIR='/tmp/kaito'
 OUTDIR='/home/fogbi/pil/過去問'
@@ -34,6 +34,43 @@ SESSIONS=[
     ('001246397','平成30年7月','h30-07','平成30年度',201807),
 ]
 NENDO_ORDER=['令和5年度','令和4年度','令和3年度','令和2年度','令和元年度','平成30年度']
+
+# ---- 解説（各問の折り畳みに注入するコードブロック）----
+# 解説/年度別/<slug>_<code>.json（キー=問番号の文字列, 値=解説テキスト）を読み込む
+KAISETSU={}
+def load_kaisetsu():
+    d=os.path.join(OUTDIR,'解説','年度別')
+    if not os.path.isdir(d): return
+    for fn in sorted(os.listdir(d)):
+        m=re.match(r'^([a-z0-9\-]+)_([a-z\-]+)\.json$',fn)
+        if not m: continue
+        slug,code=m.group(1),m.group(2)
+        try:
+            data=json.load(open(os.path.join(d,fn),encoding='utf-8'))
+        except Exception as e:
+            print(f'  解説読込失敗 {fn}: {e}'); continue
+        for num,txt in data.items():
+            KAISETSU.setdefault(slug,{})[f'{code}:{num}']=txt
+
+def _clean_yougo(line):
+    """用語行から「～を問う問題」等のメタ説明文を除去。全部メタならNone。"""
+    segs=line.split('。')
+    kept=[s for s in segs if s.strip() and not (
+        s.rstrip().endswith('問う問題') or s.rstrip().endswith('を問う'))]
+    return ('。'.join(kept)+'。') if kept else None
+
+def fmt_kaisetsu(expl):
+    """コードブロックに入れる解説行に整形。「正答:」行は除去、「用語:」はメタ除去。"""
+    out=[]
+    for ln in expl.rstrip('\n').split('\n'):
+        s=ln.strip()
+        if re.match(r'^正答[:：]',s): continue
+        if re.match(r'^用語[:：]',s):
+            c=_clean_yougo(ln)
+            if c is None: continue
+            out.append(c); continue
+        out.append(ln)
+    return out
 
 FIG_KW=re.compile(r'下図|右図|左図|上図|次の図|前図|図中|下の図|下記の図|図面|下表|下記の表|次の表')
 Q_RE=re.compile(r'^問\s*([０-９0-9]+)\s*(.*)$')
@@ -300,6 +337,12 @@ def emit_subject(lines,slug,s,ans):
         if seq and 1<=q['num']<=len(seq):
             lines.append(':::spoiler 正答')
             lines.append(seq[q['num']-1])
+            expl=KAISETSU.get(slug,{}).get(f'{s["code"]}:{q["num"]}')
+            if expl:
+                lines.append('')
+                lines.append('```')
+                lines.extend(fmt_kaisetsu(expl))
+                lines.append('```')
             lines.append(':::\n')
     return jobs
 
@@ -324,32 +367,44 @@ def session_md(pid,label,slug):
     return '\n'.join(lines)+'\n', [(s['name'],s['code']) for s in subjects], \
            {'q':sum(len(s['questions']) for s in subjects)}
 
+load_kaisetsu()
+
 by_nendo={}
+sessions=[]
 for pid,label,slug,nendo,sk in SESSIONS:
     md,subs,st=session_md(pid,label,slug)
     by_nendo.setdefault(nendo,[]).append((sk,slug,label,md,subs))
+    sessions.append((sk,slug,label,nendo,md))
     print(f'{label:14s} 科目{len(subs)} 問{st["q"]:3d}')
 
-nendo_files={}
-for nendo in NENDO_ORDER:
-    items=sorted(by_nendo[nendo],key=lambda x:x[0])
-    fname=f'自家用操縦士_{nendo}.md'; nendo_files[nendo]=fname
-    out=[f'# 自家用操縦士 学科試験 過去問（{nendo}）\n']
+def perki_fname(label): return f'自家用操縦士_{label}期.md'
+
+# 期ごとに1ファイル
+for sk,slug,label,nendo,md in sessions:
+    fname=perki_fname(label)
+    out=[f'# 自家用操縦士 学科試験 過去問（{label}期）\n']
     out.append('出典: 国土交通省 航空局 [過去問一覧](https://www.mlit.go.jp/koku/koku_fr10_000025.html)　各科目20題・1問5点・70点以上で合格。\n')
-    out.append('各設問の選択肢はチェックボックス、**正答は「正答」の折りたたみ**（HackMDでクリックで開く）です。\n')
+    out.append('各設問の選択肢はチェックボックス、**正答・解説は「正答」の折りたたみ**（HackMDでクリックで開く）です。\n')
     out.append('[TOC]\n')
     out.append('---\n')
-    for sk,slug,label,md,subs in items:
-        out.append(md); out.append('---\n')
+    out.append(md)
     open(os.path.join(OUTDIR,fname),'w',encoding='utf-8').write('\n'.join(out))
-    print(f'書出: {fname} ({len(items)}期)')
+    print(f'書出: {fname}')
 
+# README（期別インデックス）
+bunseki=urllib.parse.quote('分析_重複と既視率.md')
 idx=['# 自家用操縦士（飛・回） 学科試験 過去問インデックス\n']
-idx.append('国土交通省 航空局が公開する[学科試験 過去問](https://www.mlit.go.jp/koku/koku_fr10_000025.html)を年度ごとにMarkdown化したもの。各ファイル冒頭の `[TOC]` から各期・各学科へ移動できます（HackMD）。\n')
-idx.append('## 年度別\n')
+idx.append('国土交通省 航空局が公開する[学科試験 過去問](https://www.mlit.go.jp/koku/koku_fr10_000025.html)を期ごとにMarkdown化したもの。各ファイル冒頭の `[TOC]` から各学科へ移動できます（HackMD）。各問の「正答」折りたたみに解説付き。\n')
+idx.append('## 例題集\n')
+idx.append('- [２０２６年６月 例題集（回転翼）](2026-06.md) — 各科目20問・解説付き\n')
+idx.append('## 期別\n')
 for nendo in NENDO_ORDER:
     items=sorted(by_nendo[nendo],key=lambda x:x[0])
-    labels='、'.join(l for _,_,l,_,_ in items)
-    idx.append(f'- [{nendo}]({urllib.parse.quote(nendo_files[nendo])}) — {labels}')
+    idx.append(f'### {nendo}')
+    for sk,slug,label,md,subs in items:
+        idx.append(f'- [{label}期]({urllib.parse.quote(perki_fname(label))})')
+    idx.append('')
+idx.append('## 分析\n')
+idx.append(f'- [重複分析と既視率]({bunseki}) — 実質409種類・95%使い回し。過去問学習の期待点(丸暗記84点/理解93点)と科目別の弱点')
 open(os.path.join(OUTDIR,'README.md'),'w',encoding='utf-8').write('\n'.join(idx)+'\n')
 print('書出: README.md')
