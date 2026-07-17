@@ -35,7 +35,7 @@ SESSIONS=[
 ]
 NENDO_ORDER=['令和5年度','令和4年度','令和3年度','令和2年度','令和元年度','平成30年度']
 
-# ---- 解説（各問の折り畳みに注入するコードブロック）----
+# ---- 解説（各問の折り畳みに注入するテキスト）----
 # 解説/年度別/<slug>_<code>.json（キー=問番号の文字列, 値=解説テキスト）を読み込む
 KAISETSU={}
 def load_kaisetsu():
@@ -60,17 +60,24 @@ def _clean_yougo(line):
     return ('。'.join(kept)+'。') if kept else None
 
 def fmt_kaisetsu(expl):
-    """コードブロックに入れる解説行に整形。「正答:」行は除去、「用語:」はメタ除去。"""
-    out=[]
+    """解説行に整形。「正答:」行は除去。「用語:」行はメタ除去のうえ集約し、
+    冒頭に太字の **用語** 見出し＋「・<用語>＝<定義>」の列挙として出力する。"""
+    terms=[]; rest=[]
     for ln in expl.rstrip('\n').split('\n'):
         s=ln.strip()
         if re.match(r'^正答[:：]',s): continue
         if re.match(r'^用語[:：]',s):
             c=_clean_yougo(ln)
             if c is None: continue
-            out.append(c); continue
-        out.append(ln)
-    return out
+            terms.append(re.sub(r'^用語[:：]\s*','',c.strip()))
+            continue
+        rest.append(ln)
+    out=[]
+    if terms:
+        out.append('**用語**')
+        out+=[f'・{t}' for t in terms]
+        if rest: out.append('')
+    return out+rest
 
 FIG_KW=re.compile(r'下図|右図|左図|上図|次の図|前図|図中|下の図|下記の図|図面|下表|下記の表|次の表')
 Q_RE=re.compile(r'^問\s*([０-９0-9]+)\s*(.*)$')
@@ -342,7 +349,7 @@ def emit_subject(lines,slug,s,ans):
                 lines.append('')
                 # コードブロックは使わず、各行を Markdown のハード改行（末尾2スペース）で列挙
                 for el in fmt_kaisetsu(expl):
-                    lines.append(el+'  ')
+                    lines.append(el+'  ' if el else '')
             lines.append(':::\n')
     return jobs
 
@@ -380,15 +387,33 @@ for pid,label,slug,nendo,sk in SESSIONS:
 def perki_fname(label): return f'自家用操縦士_{label}期.md'
 
 # 期ごとに1ファイル
+CB_RE=re.compile(r'^- \[[ x]\] ')
 for sk,slug,label,nendo,md in sessions:
     fname=perki_fname(label)
+    path=os.path.join(OUTDIR,fname)
     out=[f'# 自家用操縦士 学科試験 過去問（{label}期）\n']
     out.append('出典: 国土交通省 航空局 [過去問一覧](https://www.mlit.go.jp/koku/koku_fr10_000025.html)　各科目20題・1問5点・70点以上で合格。\n')
     out.append('各設問の選択肢はチェックボックス、**正答・解説は「正答」の折りたたみ**（HackMDでクリックで開く）です。\n')
     out.append('[TOC]\n')
     out.append('---\n')
     out.append(md)
-    open(os.path.join(OUTDIR,fname),'w',encoding='utf-8').write('\n'.join(out))
+    new='\n'.join(out)
+    if os.path.exists(path):
+        old=open(path,encoding='utf-8').read()
+        # 既存ファイル先頭のYAML frontmatter（HackMDのtitle等）を温存
+        fm=re.match(r'^---\n.*?\n---\n+',old,re.S)
+        fm=fm.group(0) if fm else ''
+        # 既存のチェック状態（- [x]）を出現順の位置対応で温存
+        oldmarks=[l.startswith('- [x]') for l in old.split('\n') if CB_RE.match(l)]
+        newlines=new.split('\n')
+        newidx=[i for i,l in enumerate(newlines) if CB_RE.match(l)]
+        if oldmarks and len(oldmarks)==len(newidx):
+            for k,i in enumerate(newidx):
+                if oldmarks[k]: newlines[i]='- [x]'+newlines[i][5:]
+        elif any(oldmarks):
+            print(f'  ⚠ {fname}: チェックボックス数不一致のため [x] 温存をスキップ')
+        new=fm+'\n'.join(newlines)
+    open(path,'w',encoding='utf-8').write(new)
     print(f'書出: {fname}')
 
 # README（期別インデックス）
