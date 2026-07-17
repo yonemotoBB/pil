@@ -340,9 +340,9 @@ def emit_subject(lines,slug,s,ans):
             expl=KAISETSU.get(slug,{}).get(f'{s["code"]}:{q["num"]}')
             if expl:
                 lines.append('')
-                lines.append('```')
-                lines.extend(fmt_kaisetsu(expl))
-                lines.append('```')
+                # コードブロックは使わず、各行を Markdown のハード改行（末尾2スペース）で列挙
+                for el in fmt_kaisetsu(expl):
+                    lines.append(el+'  ')
             lines.append(':::\n')
     return jobs
 
