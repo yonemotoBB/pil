@@ -15,7 +15,7 @@ ORDER = {'平成30年7月期':1,'平成30年9月臨時期':2,'平成30年11月�
 '令和4年11月期':15,'令和5年3月期':16,'令和5年7月期':17}
 
 Q = []  # (order, label, subj, num, stem_n, all_n)
-for md in glob.glob('/home/fogbi/pil/過去問/自家用操縦士_*.md'):
+for md in glob.glob('/home/fogbi/project/pil/過去問/自家用操縦士_*.md'):
     s = open(md, encoding='utf-8').read()
     for p in re.split(r'^## ', s, flags=re.M)[1:]:
         label = p.splitlines()[0].strip()

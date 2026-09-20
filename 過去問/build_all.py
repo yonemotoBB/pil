@@ -2,7 +2,7 @@
 import fitz, re, os, unicodedata, urllib.parse, json
 
 PDFDIR='/tmp/kakomon'; OCRDIR='/tmp/ocr'; ANSDIR='/tmp/kaito'
-OUTDIR='/home/fogbi/pil/過去問'
+OUTDIR='/home/fogbi/project/pil/過去問'
 IMGDIR=os.path.join(OUTDIR,'images')
 os.makedirs(IMGDIR,exist_ok=True)
 RAW='https://raw.githubusercontent.com/yonemotoBB/pil/main/'
