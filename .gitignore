@@ -2,3 +2,6 @@
 *.pdf
 __pycache__/
 *.pyc
+読み上げ/out/
+読み上げ/.venv/
+*.mp3
