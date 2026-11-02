@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>ニーボード</title>
+<!--
+  ニーボードに挟む早見表。JIS B5 縦 2 ページ（両面に刷ってラミネートする前提なので書き込み欄は置かない）。
+    ① 非常時（スコーク・通信機故障・光線信号・位置不明）… 過去問/ の正答と解説から
+    ② 空港（RJBK・RJOB・RJOA・RJOT）… AIP Japan AD 2（2026-03-01 発効の版）から
+  PDF は 印刷用/build_kneeboard.py で作る。
+-->
+<style>
+  @page { size: 182mm 257mm; margin: 7mm; }
+  * { box-sizing: border-box; }
+  html { font-family: "Noto Sans CJK JP", "Noto Sans JP", sans-serif; color: #000; }
+  body { margin: 0; font-size: 10pt; line-height: 1.4; }
+  .page { height: 243mm; display: flex; flex-direction: column; gap: 2.6mm; overflow: hidden; }
+  .page + .page { break-before: page; }
+
+  header { display: flex; justify-content: space-between; align-items: baseline;
+           border-bottom: 1.2mm solid #000; padding-bottom: 0.8mm; }
+  header h1 { font-size: 16pt; margin: 0; letter-spacing: 0.05em; }
+  header .side { font-size: 8pt; }
+
+  section { border: 0.35mm solid #000; padding: 1.8mm 2.4mm; }
+  section h2 { font-size: 11.5pt; margin: 0 0 1.2mm; background: #000; color: #fff;
+               padding: 0.3mm 1.8mm; display: inline-block;
+               -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  ul, ol { margin: 0; padding-left: 5mm; }
+  li { margin: 0.4mm 0; }
+  .note { font-size: 8pt; }
+  .mono { font-family: "Noto Sans Mono CJK JP", monospace; }
+
+  /* スコーク */
+  .squawk { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2mm; }
+  .sq { border: 0.7mm solid #000; text-align: center; padding: 1.2mm 0 1.6mm; }
+  .sq b { display: block; font-size: 34pt; line-height: 1.05; font-family: "Noto Sans Mono CJK JP", monospace; }
+  .sq span { display: block; font-size: 10.5pt; font-weight: bold; }
+  .freq { display: flex; align-items: baseline; gap: 3mm; margin: 2mm 0 0.6mm; }
+  .freq b { font-size: 20pt; font-family: "Noto Sans Mono CJK JP", monospace; }
+
+  table { border-collapse: collapse; width: 100%; }
+  th, td { border: 0.3mm solid #000; padding: 0.7mm 1.5mm; vertical-align: top; text-align: left; }
+  th { background: #ddd; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  td.sig { white-space: nowrap; font-weight: bold; }
+
+  /* 空港 */
+  .ad { display: flex; flex-direction: column; gap: 1mm; }
+  .ad .top { display: flex; justify-content: space-between; align-items: baseline;
+             border-bottom: 0.5mm solid #000; padding-bottom: 0.4mm; }
+  .ad .top b { font-size: 21pt; font-family: "Noto Sans Mono CJK JP", monospace; }
+  .ad .top span { font-size: 11pt; font-weight: bold; }
+  .ad .top em { font-style: normal; font-size: 9pt; }
+  .ad .spec { display: grid; grid-template-columns: auto 1fr; gap: 0.2mm 2.5mm; }
+  .ad .spec dt { font-weight: bold; }
+  .ad .spec dd { margin: 0; }
+  .ad table { font-size: 10pt; margin-top: 1mm; }
+  .ad td.f { font-family: "Noto Sans Mono CJK JP", monospace; font-weight: bold; font-size: 15pt; white-space: nowrap; vertical-align: middle; }
+  .ad td.n { white-space: nowrap; }
+  .grow { flex: 1; }
+  .ads { flex: 1; display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr; gap: 2.4mm; }
+  .ad .spec { grid-template-columns: auto 1fr; font-size: 10.5pt; }
+  .ad td.note { line-height: 1.3; font-size: 8.5pt; }
+  .ad td.n { vertical-align: middle; font-weight: bold; }
+</style>
+</head>
+<body>
+
+<!-- ===== ① 非常時 ===== -->
+<div class="page">
+  <header>
+    <h1>① 非常時</h1>
+    <span class="side">回転翼 自家用 ／ VFR</span>
+  </header>
+
+  <section>
+    <h2>トランスポンダー（モード A）</h2>
+    <div class="squawk">
+      <div class="sq"><b>7700</b><span>緊急状態</span></div>
+      <div class="sq"><b>7600</b><span>通信機故障</span></div>
+      <div class="sq"><b>7500</b><span>不法妨害（ハイジャック等）</span></div>
+    </div>
+    <div class="freq">
+      <span>国際緊急周波数</span><b>121.5 MHz</b><span>（軍用 243.0 MHz）</span>
+    </div>
+    <ul>
+      <li>最初の送信は<b>それまで使っていた周波数</b>で。必要と判断したら 121.5 を使ってよい</li>
+      <li>通信が設定でき、周波数を指定されたらその周波数に移る</li>
+      <li>121.5 でつながらないときは、こだわらず<b>他の適当な周波数</b>で試す</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>通信機故障（VFR）</h2>
+    <ol>
+      <li>トランスポンダー <b>7600</b></li>
+      <li>周波数を切り替えた直後なら<b>前の周波数に戻す</b>。音量・スケルチ・ヘッドセットの差し込みを見る</li>
+      <li>受信機だけの故障かもしれないので、位置と意図を<b>一方送信</b>し続ける</li>
+      <li><b>VMC を維持</b>し、安全に着陸できる<b>最寄りの飛行場</b>に着陸する。管制塔の光線信号に従う</li>
+      <li>着陸したら、すみやかに管制機関へ到着を連絡する</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>管制塔からの光線信号</h2>
+    <table>
+      <tr><th style="width:24%">信号</th><th>飛行中</th><th>地上</th></tr>
+      <tr><td class="sig">緑の不動光</td><td>着陸してよい</td><td>離陸してよい</td></tr>
+      <tr><td class="sig">赤の不動光</td><td>進路を他機に譲り、場周経路の飛行を続けよ</td><td>止まれ</td></tr>
+      <tr><td class="sig">緑の閃光</td><td>着陸のため引き返せ</td><td>地上走行してよい</td></tr>
+      <tr><td class="sig">赤の閃光</td><td>飛行場は使えない。着陸するな</td><td>使用中の着陸区域から離れよ</td></tr>
+      <tr><td class="sig">白の閃光</td><td>この飛行場に着陸し、エプロンに進め</td><td>飛行場の出発点に帰れ</td></tr>
+      <tr><td class="sig">赤と緑の交互閃光</td><td colspan="2">注意せよ（危険）</td></tr>
+    </table>
+  </section>
+
+  <section class="grow">
+    <h2>位置不明（ロストポジション）</h2>
+    <ul>
+      <li>送受信できる → 最寄りの管制機関の周波数か <b>121.5</b> で呼びかけ、援助を頼む</li>
+      <li>送受信できない → レーダーに見つけてもらうため<b>三角飛行</b>を<b>少なくとも 2 回</b>
+        <table style="margin-top:1mm">
+          <tr><th>受信できない</th><td><b>左回り</b>の三角形</td></tr>
+          <tr><th>受信できるが応答がない（送信できない）</th><td><b>右回り</b>の三角形</td></tr>
+        </table>
+      </li>
+    </ul>
+  </section>
+</div>
+
+<!-- ===== ② 空港 ===== -->
+<div class="page">
+  <header>
+    <h1>② 空港</h1>
+    <span class="side">時刻はすべて JST ／ AIP Japan AD 2（2026-03-01 発効の版）</span>
+  </header>
+
+  <div class="ads">
+  <section class="ad">
+    <div class="top"><span><b>RJBK</b>　岡南</span><em>標高 0 ft ／ VFR のみ</em></div>
+    <dl class="spec">
+      <dt>滑走路</dt><dd>09/27　1,200 × 30 m　舗装</dd>
+      <dt>燃料</dt><dd><b>100/130・JET A-1</b>（給油車）</dd>
+      <dt>給油</dt><dd>09:30–17:30<br>
+        <span class="note">08:30–09:30・17:30–18:30 は頼めば可　TEL/FAX 086-262-1091</span></dd>
+      <dt>運用</dt><dd>08:30–18:30</dd>
+    </dl>
+    <table>
+      <tr><td class="n">A/G</td><td class="f">130.75</td><td class="note">Kohnan Flight Service</td></tr>
+    </table>
+    <div class="note">到着機は ARP から <b>5 NM 以遠</b>で A/G に位置を通報し、必要な情報を受ける。</div>
+  </section>
+
+  <section class="ad">
+    <div class="top"><span><b>RJOB</b>　岡山</span><em>標高 785 ft</em></div>
+    <dl class="spec">
+      <dt>滑走路</dt><dd>07/25　3,000 × 45 m　舗装</dd>
+      <dt>燃料</dt><dd><b>JET A-1 のみ</b>（AVGAS なし）</dd>
+      <dt>給油</dt><dd>06:00–20:00</dd>
+      <dt>運用</dt><dd>07:00–22:00</dd>
+    </dl>
+    <table>
+      <tr><td class="n">TWR</td><td class="f">124.3</td><td class="note">Okayama Tower<br>予備 126.2</td></tr>
+      <tr><td class="n">APP/DEP</td><td class="f">121.2</td><td class="note">Kansai Approach / Departure<br>予備 120.4</td></tr>
+    </table>
+  </section>
+
+  <section class="ad">
+    <div class="top"><span><b>RJOA</b>　広島</span><em>標高 1,086 ft</em></div>
+    <dl class="spec">
+      <dt>滑走路</dt><dd>10/28　3,000 × 60 m　舗装</dd>
+      <dt>燃料</dt><dd><b>JET A-1 のみ</b>（AVGAS なし）</dd>
+      <dt>給油</dt><dd>06:00–22:30</dd>
+      <dt>運用</dt><dd>07:30–22:30</dd>
+    </dl>
+    <table>
+      <tr><td class="n">ATIS</td><td class="f">127.25</td><td class="note">Hiroshima Airport</td></tr>
+      <tr><td class="n">TWR</td><td class="f">118.6</td><td class="note">Hiroshima Tower<br>予備 126.2</td></tr>
+      <tr><td class="n">APP</td><td class="f">124.05</td><td class="note">Hiroshima Approach<br>予備 119.9</td></tr>
+      <tr><td class="n">DEP</td><td class="f">119.9</td><td class="note">Hiroshima Departure</td></tr>
+    </table>
+  </section>
+
+  <section class="ad">
+    <div class="top"><span><b>RJOT</b>　高松</span><em>標高 607 ft</em></div>
+    <dl class="spec">
+      <dt>滑走路</dt><dd>08/26　2,500 × 60 m　舗装</dd>
+      <dt>燃料</dt><dd><b>JET A-1・AVGAS 100</b></dd>
+      <dt>給油</dt><dd>07:00–22:00</dd>
+      <dt>運用</dt><dd>07:00–22:00</dd>
+    </dl>
+    <table>
+      <tr><td class="n">ATIS</td><td class="f">127.45</td><td class="note">Takamatsu Airport</td></tr>
+      <tr><td class="n">TWR</td><td class="f">118.3</td><td class="note">Takamatsu Tower<br>予備 126.2 ／ 位置通報 135.9</td></tr>
+      <tr><td class="n">APP/DEP</td><td class="f">121.2</td><td class="note">Kansai Approach / Departure<br>予備 120.4</td></tr>
+      <tr><td class="n">TCA</td><td class="f">119.025</td><td class="note">Kansai TCA<br>08:00–19:30</td></tr>
+    </table>
+  </section>
+  </div>
+
+  <div class="note">標高は AD 2.2 の飛行場標高。どの空港にも GND の周波数は載っていない。使う前に最新の AIRAC と NOTAM で確かめる。</div>
+</div>
+
+</body>
+</html>

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""ニーボード用の非常時早見表を JIS B5 の PDF にする。
+"""ニーボードに挟む早見表（非常時・空港）を JIS B5 の PDF にする。
 
   python3 印刷用/build_kneeboard.py
 
-入力: 印刷用/ニーボード_非常用.html（中身はこちらを直す）
-出力: 印刷用/ニーボード_非常用.pdf（182×257mm 縦・2 ページ。両面で 1 枚）
+入力: 印刷用/ニーボード.html（中身はこちらを直す）
+出力: 印刷用/ニーボード.pdf（182×257mm 縦・2 ページ。両面で 1 枚）
 
 Playwright が落としてある Chromium をヘッドレスで使う。印刷の大きさは
 HTML の @page で決めているので、印刷するときは「実際のサイズ」（拡大縮小なし）にする。
@@ -15,8 +15,8 @@ import subprocess
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent
-SRC = ROOT / "ニーボード_非常用.html"
-OUT = ROOT / "ニーボード_非常用.pdf"
+SRC = ROOT / "ニーボード.html"
+OUT = ROOT / "ニーボード.pdf"
 
 CANDIDATES = [
     "~/.cache/ms-playwright/chromium_headless_shell-*/chrome-headless-shell-linux64/chrome-headless-shell",
