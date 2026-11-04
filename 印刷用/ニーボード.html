@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <title>ニーボード</title>
 <!--
-  ニーボードに挟む早見表。JIS B5 縦 2 ページ（両面に刷ってクリアファイルに入れる）。
+  ニーボードに挟む早見表。A5 縦 2 ページ（両面に刷ってクリアファイルに入れる）。
     ① 非常時 … スコーク・通信機故障・位置不明は 過去問/ の正答と解説から。
                 光線信号と信号弾は「航空機と管制業務を行なう機関との間における信号に関する告示」
                 （運輸省告示第227号、航空法施行規則第202条）の文言どおり。
@@ -12,7 +12,11 @@
   PDF は 印刷用/build_kneeboard.py で作る。
 -->
 <style>
-  @page { size: 182mm 257mm; margin: 7mm; }
+  /* A5（148×210mm）。2026-11-04、ユーザーの訂正「前にニーボードは B5 としたが、正しくは A5 だった」。
+     並びは B5（182×257mm、余白 7mm）で組んだまま、全体を zoom 0.8 で縮めて A5 の余白 6mm の中（136×198mm）に入れる。
+     下の mm・pt は B5 のときの値なので、刷り上がりはその 0.8 倍 */
+  @page { size: 148mm 210mm; margin: 7.5mm; }   /* Chromium は余白にも zoom を掛けるので、刷り上がりは 6mm */
+  html { zoom: 0.8; }
   * { box-sizing: border-box; }
   html { font-family: "Noto Sans CJK JP", "Noto Sans JP", sans-serif; color: #000;
          -webkit-print-color-adjust: exact; print-color-adjust: exact; }

@@ -4,14 +4,18 @@
 <meta charset="utf-8">
 <title>ニーボード 手順</title>
 <!--
-  ニーボードに挟む R44 の手順（始動前〜停止）。表は「③ 始動前・エンジン始動」（クラッチ・ライトまで）、裏は「④ 暖機・離陸・停止」（LIMIT MAP CHART から）。JIS B5 縦 2 ページ（両面に刷ってクリアファイルに入れる）。ニーボード.html（①非常時・②空港）と同じ作り。
+  ニーボードに挟む R44 の手順（始動前〜停止）。表は「③ 始動前・エンジン始動」（クラッチ・ライトまで）、裏は「④ 暖機・離陸・停止」（LIMIT MAP CHART から）。A5 縦 2 ページ（両面に刷ってクリアファイルに入れる）。ニーボード.html（①非常時・②空港）と同じ作り。
     出典: ユーザーの Google スプレッドシート「R44-2」の「プロシージャ」シート（2026-11-04 に読んだもの）。項目・操作・回転数はシートのとおり。
     左の小さな番号（1〜7）はシートの A 列のまま。意味はシートに書かれていない。
     「＋」の付いた行（シートで1段右にずれた行）は、前の行に続けて行う小項目として字下げした。
   PDF は 印刷用/build_kneeboard.py で作る。
 -->
 <style>
-  @page { size: 182mm 257mm; margin: 7mm; }
+  /* A5（148×210mm）。2026-11-04、ユーザーの訂正「前にニーボードは B5 としたが、正しくは A5 だった」。
+     並びは B5（182×257mm、余白 7mm）で組んだまま、全体を zoom 0.8 で縮めて A5 の余白 6mm の中（136×198mm）に入れる。
+     下の mm・pt は B5 のときの値なので、刷り上がりはその 0.8 倍 */
+  @page { size: 148mm 210mm; margin: 7.5mm; }   /* Chromium は余白にも zoom を掛けるので、刷り上がりは 6mm */
+  html { zoom: 0.8; }
   * { box-sizing: border-box; }
   html { font-family: "Noto Sans CJK JP", "Noto Sans JP", sans-serif; color: #000;
          -webkit-print-color-adjust: exact; print-color-adjust: exact; }
