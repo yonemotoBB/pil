@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""ニーボードに挟む早見表（非常時・空港）を JIS B5 の PDF にする。
+"""ニーボードに挟む早見表を JIS B5 の PDF にする。
 
   python3 印刷用/build_kneeboard.py
 
-入力: 印刷用/ニーボード.html（中身はこちらを直す）
-出力: 印刷用/ニーボード.pdf（182×257mm 縦・2 ページ。両面で 1 枚）
+入力 → 出力（中身は HTML を直す。どれも 182×257mm 縦・2 ページ。両面で 1 枚）:
+  印刷用/ニーボード.html      → ニーボード.pdf      ①非常時・②空港
+  印刷用/ニーボード_手順.html → ニーボード_手順.pdf ③始動前・エンジン始動・④離陸・停止（R44。2026-11-04 に足した）
 
 Playwright が落としてある Chromium をヘッドレスで使う。印刷の大きさは
 HTML の @page で決めているので、印刷するときは「実際のサイズ」（拡大縮小なし）にする。
@@ -15,8 +16,7 @@ import subprocess
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent
-SRC = ROOT / "ニーボード.html"
-OUT = ROOT / "ニーボード.pdf"
+PAGES = ["ニーボード", "ニーボード_手順"]
 
 CANDIDATES = [
     "~/.cache/ms-playwright/chromium_headless_shell-*/chrome-headless-shell-linux64/chrome-headless-shell",
@@ -34,21 +34,24 @@ def find_chrome() -> str:
 
 
 def main() -> None:
-    subprocess.run(
-        [
-            find_chrome(),
-            "--headless",
-            "--no-sandbox",
-            "--disable-gpu",
-            "--no-pdf-header-footer",
-            f"--print-to-pdf={OUT}",
-            SRC.as_uri(),
-        ],
-        check=True,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
-    print(OUT)
+    chrome = find_chrome()
+    for name in PAGES:
+        src, out = ROOT / f"{name}.html", ROOT / f"{name}.pdf"
+        subprocess.run(
+            [
+                chrome,
+                "--headless",
+                "--no-sandbox",
+                "--disable-gpu",
+                "--no-pdf-header-footer",
+                f"--print-to-pdf={out}",
+                src.as_uri(),
+            ],
+            check=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        print(out)
 
 
 if __name__ == "__main__":
