@@ -4,72 +4,61 @@
 <meta charset="utf-8">
 <title>ニーボード 手順</title>
 <!--
-  ニーボードに挟む R44 の手順（始動前〜停止）。表は「③ 始動前・エンジン始動」（クラッチ・ライトまで）、裏は「④ 暖機・離陸・停止」（LIMIT MAP CHART から）。A5 縦 2 ページ（両面に刷ってクリアファイルに入れる）。ニーボード.html（①非常時・②空港）と同じ作り。
+  ニーボードに挟む R44 の手順（始動前〜停止）。A5 縦 1 ページ、左右 2 段（左: 始動前・エンジン始動、右: 暖機・離陸・停止）。
+  2026-11-04、ユーザーの指定「1枚に収まるように」「ファイルするので記入欄はなし」。それまでは B5→A5 の 2 ページで、裏に「今日の値」の記入欄があった。
     出典: ユーザーの Google スプレッドシート「R44-2」の「プロシージャ」シート（2026-11-04 に読んだもの）。項目・操作・回転数はシートのとおり。
+    ただしスロットルを OPEN・CLOSE するときの発声は、シートの「スロットルオープン」「スロットルクローズ」でなく「エンジン回転 xx%」（同日、ユーザーの指定）。
     左の小さな番号（1〜7）はシートの A 列のまま。意味はシートに書かれていない。
     「＋」の付いた行（シートで1段右にずれた行）は、前の行に続けて行う小項目として字下げした。
   PDF は 印刷用/build_kneeboard.py で作る。
 -->
 <style>
-  /* A5（148×210mm）。2026-11-04、ユーザーの訂正「前にニーボードは B5 としたが、正しくは A5 だった」。
-     並びは B5（182×257mm、余白 7mm）で組んだまま、全体を zoom 0.8 で縮めて A5 の余白 6mm の中（136×198mm）に入れる。
-     下の mm・pt は B5 のときの値なので、刷り上がりはその 0.8 倍 */
-  @page { size: 148mm 210mm; margin: 7.5mm; }   /* Chromium は余白にも zoom を掛けるので、刷り上がりは 6mm */
-  html { zoom: 0.8; }
+  @page { size: 148mm 210mm; margin: 5mm; }
   * { box-sizing: border-box; }
   html { font-family: "Noto Sans CJK JP", "Noto Sans JP", sans-serif; color: #000;
          -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  body { margin: 0; font-size: 9pt; line-height: 1.25; }
-  .page { height: 243mm; display: flex; flex-direction: column; gap: 1.6mm; overflow: hidden; }
-  .page + .page { break-before: page; }
+  body { margin: 0; font-size: 6.7pt; line-height: 1.15; }
+  .page { height: 200mm; display: flex; flex-direction: column; gap: 1.2mm; overflow: hidden; }
 
   header { display: flex; justify-content: space-between; align-items: baseline;
-           border-bottom: 1.2mm solid #000; padding-bottom: 0.8mm; }
-  header h1 { font-size: 16pt; margin: 0; letter-spacing: 0.05em; }
-  header .side { font-size: 8pt; }
+           border-bottom: 1mm solid #000; padding-bottom: 0.6mm; }
+  header h1 { font-size: 12pt; margin: 0; letter-spacing: 0.05em; }
+  header .side { font-size: 6.5pt; }
+  .cols { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 2.4mm; align-items: start; }
+  .col { display: flex; flex-direction: column; gap: 1.4mm; }
 
-  section h2 { font-size: 11pt; margin: 0 0 0.8mm; background: #000; color: #fff;
-               padding: 0.3mm 1.8mm; display: inline-block; }
+  section h2 { font-size: 8pt; margin: 0 0 0.5mm; background: #000; color: #fff;
+               padding: 0.2mm 1.4mm; display: inline-block; }
   table { border-collapse: collapse; width: 100%; table-layout: fixed; }
-  th, td { border: 0.3mm solid #000; padding: 0.3mm 1.2mm; vertical-align: middle; text-align: left; }
-  th { background: #ddd; font-size: 8pt; text-align: center; padding: 0.3mm 0.8mm; }
-  col.n { width: 5mm; } col.rpm { width: 12mm; }
-  td.n { text-align: center; font-size: 7.5pt; color: #444; }
-  td.rpm { text-align: center; font-weight: bold; font-family: "Noto Sans Mono CJK JP", monospace; }
-  td.it b { font-weight: bold; }
-  tr.sub td.it { padding-left: 5mm; }
-  tr.sub td.it::before { content: "＋ "; color: #555; }
-  tr.sub2 td.it { padding-left: 9mm; }
-  tr.sub2 td.it::before { content: "＋ "; color: #555; }
+  th, td { border: 0.25mm solid #000; padding: 0.2mm 0.7mm; vertical-align: middle; text-align: left; }
+  th { background: #ddd; font-size: 6pt; text-align: center; padding: 0.2mm 0.4mm; }
+  col.n { width: 3.2mm; } col.it { width: 26mm; } col.rpm { width: 8.5mm; }
+  td.n { text-align: center; font-size: 5.5pt; color: #444; padding: 0; }
+  td.rpm { text-align: center; font-weight: bold; font-family: "Noto Sans Mono CJK JP", monospace; padding: 0; }
+  tr.sub td.it { padding-left: 2.6mm; }
+  tr.sub td.it::before { content: "＋"; color: #555; }
+  tr.sub2 td.it { padding-left: 4.6mm; }
+  tr.sub2 td.it::before { content: "＋"; color: #555; }
   tr.ck td { background: #e9e9e9; font-weight: bold; }
   tr.ck td.it::before { content: "➡ "; }
   /* 回転数が変わる行の上に太い線（どこで回転数を変えるかを目で追えるように） */
-  tr.chg td { border-top: 0.8mm solid #000; }
+  tr.chg td { border-top: 0.6mm solid #000; }
   .say { font-weight: bold; }
-
-  /* 記入欄 */
-  .fill { display: grid; grid-template-columns: 1.3fr 1.1fr 0.7fr 1fr; gap: 1.2mm; }
-  .box { border: 0.5mm solid #000; padding: 0.8mm 1.4mm; min-height: 12mm; }
-  .box .t { font-size: 8pt; font-weight: bold; }
-  .box .v { font-size: 9.5pt; margin-top: 2mm; font-family: "Noto Sans Mono CJK JP", monospace; }
-  .note { font-size: 7.5pt; }
-  .memo { flex: 1; border: 0.35mm solid #000; padding: 1mm 1.8mm; }
-  .memo .t { font-size: 8pt; font-weight: bold; }
+  .note { font-size: 5.5pt; }
 </style>
 </head>
 <body>
-
-<!-- ===== ③ 始動前・エンジン始動 ===== -->
 <div class="page">
   <header>
-    <h1>③ 始動前・エンジン始動</h1>
-    <span class="side">R44 ／ 回転数は RPM（%）</span>
+    <h1>③ R44 手順（始動前〜停止）</h1>
+    <span class="side">回転数は RPM（%）</span>
   </header>
-
-  <section>
+  <div class="cols">
+    <div class="col">
+<section>
     <h2>1. エンジン始動前</h2>
     <table>
-      <colgroup><col class="n"><col style="width:66mm"><col><col class="rpm"></colgroup>
+      <colgroup><col class="n"><col class="it"><col><col class="rpm"></colgroup>
       <tr><th>№</th><th>項目</th><th>操作・確認</th><th>RPM</th></tr>
       <tr><td class="n"></td><td class="it">シートベルト</td><td>FASTEN</td><td class="rpm">-</td></tr>
       <tr><td class="n">3</td><td class="it">燃料シャット・オフ・バルブ</td><td>ON</td><td class="rpm">-</td></tr>
@@ -95,11 +84,10 @@
       <tr class="ck"><td class="n"></td><td class="it" colspan="3">BEFORE STARTING ENGINE CHECKLIST</td></tr>
     </table>
   </section>
-
-  <section>
+<section>
     <h2>2. エンジン始動</h2>
     <table>
-      <colgroup><col class="n"><col style="width:66mm"><col><col class="rpm"></colgroup>
+      <colgroup><col class="n"><col class="it"><col><col class="rpm"></colgroup>
       <tr><th>№</th><th>項目</th><th>操作・確認</th><th>RPM</th></tr>
       <tr><td class="n"></td><td class="it">スターター</td><td class="say">「コンタクト！」</td><td class="rpm">-</td></tr>
       <tr class="sub"><td class="n"></td><td class="it">ミクスチャー</td><td>フル・リッチ</td><td class="rpm">-</td></tr>
@@ -117,21 +105,12 @@
       <tr><td class="n"></td><td class="it">クラッチ・ライト</td><td>消灯確認</td><td class="rpm">55%</td></tr>
     </table>
   </section>
-  <div style="flex:1"></div>
-  <div class="note">出典: スプレッドシート「R44-2」の「プロシージャ」（2026-11-04）。左の小さな番号はシートの A 列のまま。太い横線は回転数を変える所。</div>
-</div>
-
-<!-- ===== ④ 暖機・離陸・停止 ===== -->
-<div class="page">
-  <header>
-    <h1>④ 暖機・離陸・停止</h1>
-    <span class="side">R44 ／ 回転数は RPM（%）</span>
-  </header>
-
-  <section>
+    </div>
+    <div class="col">
+<section>
     <h2>2. エンジン始動（続き: 暖機と点検）</h2>
     <table>
-      <colgroup><col class="n"><col style="width:66mm"><col><col class="rpm"></colgroup>
+      <colgroup><col class="n"><col class="it"><col><col class="rpm"></colgroup>
       <tr><th>№</th><th>項目</th><th>操作・確認</th><th>RPM</th></tr>
       <tr class="chg"><td class="n">1</td><td class="it">LIMIT MAP CHART</td><td class="say">「MAP xx, TOP yy」</td><td class="rpm">65%</td></tr>
       <tr><td class="n"></td><td class="it">暖機運転</td><td>60％〜70％</td><td class="rpm">65%</td></tr>
@@ -141,19 +120,18 @@
       <tr class="chg"><td class="n">6</td><td class="it">ドアー</td><td>閉及びラッチ</td><td class="rpm">65%</td></tr>
       <tr><td class="n">7</td><td class="it">サイクリック、コレクティブ、フリクション</td><td>オフ</td><td class="rpm">65%</td></tr>
       <tr><td class="n"></td><td class="it">ハイドロシステム</td><td>前後左右 →「ハイドロオフ」小さく前後 →「ハイドロオン」小さく円</td><td class="rpm">65%</td></tr>
-      <tr class="chg"><td class="n"></td><td class="it">ガバナー ON、スロットル OPEN</td><td class="say">「スロットルオープン」</td><td class="rpm">101%</td></tr>
+      <tr class="chg"><td class="n"></td><td class="it">ガバナー ON、スロットル OPEN</td><td class="say">「エンジン回転 xx%」</td><td class="rpm">101%</td></tr>
       <tr><td class="n"></td><td class="it">ハイドロコントロール PRE-TAKEOFF CHECK</td><td>わずかに後ろから、小さく前後</td><td class="rpm">101%</td></tr>
       <tr><td class="n"></td><td class="it">コーション・ワーニングライト</td><td class="say">「オールオフ」</td><td class="rpm">101%</td></tr>
       <tr><td class="n"></td><td class="it">LOW RPM WARNING SYSTEM CHECK</td><td>コレクティブ少し上げ、回転数を下げる … 警告 ON/OFF の％</td><td class="rpm">101%</td></tr>
     </table>
   </section>
-
-  <section>
+<section>
     <h2>3. 離陸手順</h2>
     <table>
-      <colgroup><col class="n"><col style="width:66mm"><col><col class="rpm"></colgroup>
+      <colgroup><col class="n"><col class="it"><col><col class="rpm"></colgroup>
       <tr><th>№</th><th>項目</th><th>操作・確認</th><th>RPM</th></tr>
-      <tr class="chg"><td class="n"></td><td class="it">エンジンアイドル</td><td class="say">「スロットルクローズ」</td><td class="rpm">65%</td></tr>
+      <tr class="chg"><td class="n"></td><td class="it">エンジンアイドル（スロットル CLOSE）</td><td class="say">「エンジン回転 xx%」</td><td class="rpm">65%</td></tr>
       <tr><td class="n"></td><td class="it">ENGINE GAGE</td><td>イン・グリーン</td><td class="rpm">65%</td></tr>
       <tr><td class="n"></td><td class="it">コーション・ワーニングライト</td><td>OFF</td><td class="rpm">65%</td></tr>
       <tr><td class="n"></td><td class="it">離陸エリア</td><td>クリアー</td><td class="rpm">65%</td></tr>
@@ -161,11 +139,10 @@
       <tr><td class="n"></td><td class="it">管制機関等とコンタクト</td><td></td><td class="rpm">65%</td></tr>
     </table>
   </section>
-
-  <section>
+<section>
     <h2>4. 停止手順</h2>
     <table>
-      <colgroup><col class="n"><col style="width:66mm"><col><col class="rpm"></colgroup>
+      <colgroup><col class="n"><col class="it"><col><col class="rpm"></colgroup>
       <tr><th>№</th><th>項目</th><th>操作・確認</th><th>RPM</th></tr>
       <tr class="chg"><td class="n"></td><td class="it">RPM</td><td>60〜70％</td><td class="rpm">65%</td></tr>
       <tr class="sub"><td class="n"></td><td class="it">コレクティブ</td><td>フルダウン、フリクション ON</td><td class="rpm">65%</td></tr>
@@ -184,18 +161,9 @@
       <tr class="ck"><td class="n"></td><td class="it" colspan="3">AFTER ENGINE SHUTDOWN</td></tr>
     </table>
   </section>
-
-  <section>
-    <h2>今日の値（地上で書き込む）</h2>
-    <div class="fill">
-      <div class="box"><div class="t">LIMIT MAP CHART（外気温 ___ ℃）</div><div class="v">MAP ______　TOP ______</div></div>
-      <div class="box"><div class="t">マグネトー・ドロップ（75％）</div><div class="v">Right ____%　Left ____%</div></div>
-      <div class="box"><div class="t">タイムイン</div><div class="v">______ 秒</div></div>
-      <div class="box"><div class="t">LOW RPM WARNING</div><div class="v">ON ____%　OFF ____%</div></div>
     </div>
-  </section>
-
+  </div>
+  <div class="note">出典: スプレッドシート「R44-2」の「プロシージャ」（2026-11-04）。左の小さな番号はシートの A 列のまま。太い横線は回転数を変える所。</div>
 </div>
-
 </body>
 </html>
