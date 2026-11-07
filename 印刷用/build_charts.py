@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-"""AIP Japan の空港チャートから、ニーボードに挟む図を選んで A5 の 1 冊にする。
+"""空港一覧と、AIP Japan の空港チャートから選んだ図を、ニーボードに挟む A5 の 1 冊にする。
 
   python3 印刷用/build_charts.py            # 落としてあればそれを使う
   python3 印刷用/build_charts.py --fetch    # AIP の写しから落とし直す（AIRAC が変わったとき）
 
-出力: 印刷用/空港チャート.pdf（A5 148×210mm 縦。ニーボードと同じ大きさ。A4 の AIP のページをベクターのまま縮める）
+出力: 印刷用/空港チャート.pdf（A5 148×210mm 縦。ニーボードと同じ大きさ）
+  1 ページ目 空港一覧（印刷用/空港一覧.html。2026-11-07 にニーボードから移した）
+  2 ページ目から 空港ごとのチャート（A4 の AIP のページをベクターのまま縮める）
 落としたチャート: 印刷用/aip/<ICAO>_chart.pdf（PDF なので git には入らない）
 
 チャートは nagodede.github.io/aip/japan の写し（AIS Japan の eAIP を機械で落としたもの）から取る。
@@ -13,9 +15,12 @@
 import json
 import pathlib
 import sys
+import tempfile
 import urllib.request
 
 import fitz  # PyMuPDF
+
+from build_kneeboard import render
 
 ROOT = pathlib.Path(__file__).resolve().parent
 AIP = ROOT / "aip"
@@ -50,6 +55,11 @@ def main(out: pathlib.Path = OUT) -> None:
     eff = json.loads((AIP / "info.json").read_text())["EffectiveDate"][:10]
 
     doc = fitz.open()
+    with tempfile.TemporaryDirectory() as tmp:
+        part = pathlib.Path(tmp) / "空港一覧.pdf"
+        render(ROOT / "空港一覧.html", part)
+        doc.insert_pdf(fitz.open(part))
+    print("空港一覧")
     for icao, pages in PICK.items():
         src_path = AIP / f"{icao}_chart.pdf"
         if refetch or not src_path.exists():

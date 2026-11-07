@@ -39,44 +39,36 @@ class KneeboardTest(unittest.TestCase):
         out = pathlib.Path(cls.tmp.name)
         load("build_kneeboard").main(out)
         cls.doc = fitz.open(out / "ニーボード.pdf")
-        cls.steps = fitz.open(out / "ニーボード_手順.pdf")
         cls.text = [p.get_text() for p in cls.doc]
 
     @classmethod
     def tearDownClass(cls):
         cls.doc.close()
-        cls.steps.close()
         cls.tmp.cleanup()
 
     def test_両面1枚のA5(self):
+        # ①非常時と②R44 手順（2026-11-07 に別の PDF だった手順をまとめた）
         self.assertEqual(len(self.doc), 2)
         assert_a5(self, self.doc)
 
-    def test_手順はA5の1ページ(self):
-        self.assertEqual(len(self.steps), 1)
-        assert_a5(self, self.steps)
-
     def test_非常時の面(self):
         t = self.text[0]
-        for s in ["7700", "7600", "7500", "121.5", "赤色の信号弾", "白の閃光"]:
+        for s in ["① 非常時", "7700", "7600", "7500", "121.5", "赤色の信号弾", "白の閃光"]:
             self.assertIn(s, t)
         # 外すよう指定されたもの
         for s in ["MAYDAY", "PAN-PAN", "要撃"]:
             self.assertNotIn(s, t)
+        # 空港は空港チャートへ移した
+        self.assertNotIn("RJOB", t)
 
     def test_非常時の面が下まで収まっている(self):
         # .page は overflow: hidden なので、はみ出すと最後の表が消える
         self.assertIn("右回り", self.text[0])
 
-    def test_空港の面(self):
+    def test_手順の面(self):
         t = self.text[1]
-        for s in ["RJBK", "RJOB", "RJOA", "RJOT", "130.75", "124.3", "118.6", "118.3", "121.2", "127.25", "127.45"]:
+        for s in ["② R44 手順", "エンジン始動前", "停止手順"]:
             self.assertIn(s, t)
-        # AIP に無い呼び方は使わない
-        self.assertNotIn("予備", t)
-
-    def test_空港の面が下まで収まっている(self):
-        self.assertIn("NOTAM", self.text[1])
 
 
 class ChartsTest(unittest.TestCase):
@@ -96,6 +88,7 @@ class ChartsTest(unittest.TestCase):
         mod.main(out)
         cls.pick = mod.PICK
         cls.doc = fitz.open(out)
+        cls.text = [p.get_text() for p in cls.doc]
 
     @classmethod
     def tearDownClass(cls):
@@ -103,7 +96,8 @@ class ChartsTest(unittest.TestCase):
         cls.tmp.cleanup()
 
     def test_ページ数とA5(self):
-        self.assertEqual(len(self.doc), sum(len(v) for v in self.pick.values()))
+        # 頭の 1 ページが空港一覧
+        self.assertEqual(len(self.doc), 1 + sum(len(v) for v in self.pick.values()))
         assert_a5(self, self.doc)
 
     def test_各ページが選んだ図(self):
@@ -112,12 +106,23 @@ class ChartsTest(unittest.TestCase):
         for icao in self.pick:
             want += [(icao, "ADC-1", None), (icao, "OTHER-1", "Visual REP")]
             want.append((icao, "OTHER-2", "Standard traffic pattern" if icao == "RJBK" else "LDG"))
-        for i, (icao, label, title) in enumerate(want):
-            t = self.doc[i].get_text()
+        for i, (icao, label, title) in enumerate(want, start=1):
+            t = self.text[i]
             with self.subTest(page=i + 1):
                 self.assertRegex(t, rf"{icao} ?AD2\.24-{re.escape(label)}")
                 if title:
                     self.assertIn(title, t)
+
+    def test_空港一覧(self):
+        # 2026-11-07 にニーボードから移した
+        t = self.text[0]
+        for s in ["空港一覧", "RJBK", "RJOB", "RJOA", "RJOT", "130.75", "124.3", "118.6", "118.3", "121.2", "127.25", "127.45"]:
+            self.assertIn(s, t)
+        # AIP に無い呼び方は使わない
+        self.assertNotIn("予備", t)
+
+    def test_空港一覧が下まで収まっている(self):
+        self.assertIn("NOTAM", self.text[0])
 
 
 if __name__ == "__main__":
