@@ -5,3 +5,4 @@ __pycache__/
 読み上げ/out/
 読み上げ/.venv/
 *.mp3
+印刷用/aip/

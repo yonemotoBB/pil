@@ -33,10 +33,11 @@ def find_chrome() -> str:
     sys.exit("Chromium が見つからない（~/.cache/ms-playwright を確認）")
 
 
-def main() -> None:
+def main(out_dir: pathlib.Path = ROOT) -> None:
+    """out_dir はテストが一時ディレクトリを渡すため。"""
     chrome = find_chrome()
     for name in PAGES:
-        src, out = ROOT / f"{name}.html", ROOT / f"{name}.pdf"
+        src, out = ROOT / f"{name}.html", out_dir / f"{name}.pdf"
         subprocess.run(
             [
                 chrome,
