@@ -84,15 +84,17 @@ class ChartsTest(unittest.TestCase):
 
         mod.fetch = no_fetch
         cls.tmp = tempfile.TemporaryDirectory()
-        out = pathlib.Path(cls.tmp.name) / "空港チャート.pdf"
-        mod.main(out)
+        tmp = pathlib.Path(cls.tmp.name)
+        mod.main(tmp / "空港チャート.pdf", tmp / "V-REP.pdf")
         cls.pick = mod.PICK
-        cls.doc = fitz.open(out)
+        cls.doc = fitz.open(tmp / "空港チャート.pdf")
+        cls.vrep = fitz.open(tmp / "V-REP.pdf")
         cls.text = [p.get_text() for p in cls.doc]
 
     @classmethod
     def tearDownClass(cls):
         cls.doc.close()
+        cls.vrep.close()
         cls.tmp.cleanup()
 
     def test_ページ数とA5(self):
@@ -104,7 +106,7 @@ class ChartsTest(unittest.TestCase):
         # AIP のページの隅の番号と題で、取り違えていないかを見る
         want = []
         for icao in self.pick:
-            want += [(icao, "ADC-1", None), (icao, "OTHER-1", "Visual REP")]
+            want.append((icao, "ADC-1", None))
             want.append((icao, "OTHER-2", "Standard traffic pattern" if icao == "RJBK" else "LDG"))
         for i, (icao, label, title) in enumerate(want, start=1):
             t = self.text[i]
@@ -112,6 +114,17 @@ class ChartsTest(unittest.TestCase):
                 self.assertRegex(t, rf"{icao} ?AD2\.24-{re.escape(label)}")
                 if title:
                     self.assertIn(title, t)
+                # V-REP はカラーで刷るので別の PDF（2026-11-07）
+                self.assertNotIn("Visual REP", t)
+
+    def test_VREPは別のPDF(self):
+        self.assertEqual(len(self.vrep), len(self.pick))
+        assert_a5(self, self.vrep)
+        for page, icao in zip(self.vrep, self.pick):
+            t = page.get_text()
+            with self.subTest(icao=icao):
+                self.assertRegex(t, rf"{icao} ?AD2\.24-OTHER-1")
+                self.assertIn("Visual REP", t)
 
     def test_空港一覧(self):
         # 2026-11-07 にニーボードから移した
