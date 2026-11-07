@@ -5,9 +5,9 @@
   python3 印刷用/build_charts.py --fetch    # AIP の写しから落とし直す（AIRAC が変わったとき）
 
 出力（どれも A5 148×210mm 縦。ニーボードと同じ大きさ。A4 の AIP のページはベクターのまま縮める）:
-  印刷用/空港チャート.pdf  1 ページ目が空港一覧（印刷用/空港一覧.html。2026-11-07 にニーボードから移した）、
+  印刷用/pdf/空港チャート.pdf  1 ページ目が空港一覧（印刷用/空港一覧.html。2026-11-07 にニーボードから移した）、
                            そのあと空港ごとの AD チャートと経路／LDG チャート（白黒で刷る）
-  印刷用/V-REP.pdf         空港ごとの Visual REP（カラーで刷るので分けた。2026-11-07、ユーザーの指定）
+  印刷用/pdf/V-REP.pdf     空港ごとの Visual REP（カラーで刷るので分けた。2026-11-07、ユーザーの指定）
 落としたチャート: 印刷用/aip/<ICAO>_chart.pdf（PDF なので git には入らない）
 
 チャートは nagodede.github.io/aip/japan の写し（AIS Japan の eAIP を機械で落としたもの）から取る。
@@ -21,12 +21,12 @@ import urllib.request
 
 import fitz  # PyMuPDF
 
-from build_kneeboard import render
+from build_kneeboard import PDF_DIR, render
 
 ROOT = pathlib.Path(__file__).resolve().parent
 AIP = ROOT / "aip"
-OUT = ROOT / "空港チャート.pdf"
-OUT_VREP = ROOT / "V-REP.pdf"
+OUT = PDF_DIR / "空港チャート.pdf"
+OUT_VREP = PDF_DIR / "V-REP.pdf"
 BASE = "https://nagodede.github.io/aip/japan/documents/"
 
 # 空港ごとに、チャートの PDF の何ページ目（1 から）を入れるか。
@@ -59,6 +59,7 @@ def add_page(doc, src, n: int) -> None:
 
 def main(out: pathlib.Path = OUT, out_vrep: pathlib.Path = OUT_VREP) -> None:
     """out・out_vrep はテストが一時ディレクトリのパスを渡すため。"""
+    out.parent.mkdir(exist_ok=True)
     refetch = "--fetch" in sys.argv[1:]
     if refetch or not (AIP / "info.json").exists():
         fetch("info.json")

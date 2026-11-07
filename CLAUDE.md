@@ -52,12 +52,14 @@
 
 ## 外から開く
 
-`印刷用/` のファイル一覧を外から見て、PDF を落とせるようにしてある（2026-11-02、ユーザーの指定。
+刷る PDF の一覧を外から見て、落とせるようにしてある（2026-11-02、ユーザーの指定。
 スマホや Google ドライブへ上げるため）。
 
 - 入口: `https://155-248-177-118.sslip.io/pil/`（Basic 認証、ユーザー名 `pil`）。パスワードの控えは `~/.config/pil-remote.txt`
-- 中身: `pil-files.service`（user unit）が `python3 -m http.server` で `印刷用/` **だけ**を 127.0.0.1:8797 で配る。
+- 中身: `pil-files.service`（user unit）が `python3 -m http.server` で `印刷用/pdf/` **だけ**を 127.0.0.1:8797 で配る。
   ツリーの上（`.git` など）は配らない。外からはトンネル `pil-tunnel.service` 経由
+- **刷る PDF は `印刷用/pdf/` に出す**（2026-11-07、ユーザー「スクリプトが同じところにあると選びにくい」。
+  それまでは `印刷用/` ごと配っていて、スクリプトや HTML と並んでいた）。PDF を作るスクリプトを足すときも出力先はここ
 - 入口の足し方・閉じ方は `~/port-open/README.md`。閉じるときは `port-open remove pil` と、`pil-files.service` を止めて無効にする
 
 ## コミットしないもの

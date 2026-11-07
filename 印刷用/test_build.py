@@ -138,5 +138,15 @@ class ChartsTest(unittest.TestCase):
         self.assertIn("NOTAM", self.text[0])
 
 
+class OutputPlaceTest(unittest.TestCase):
+    def test_刷るPDFは_pdf_フォルダにまとまる(self):
+        # 外の入口 /pil/ は 印刷用/pdf/ だけを見せる（2026-11-07）
+        pdf_dir = HERE / "pdf"
+        self.assertEqual(load("build_kneeboard").PDF_DIR, pdf_dir)
+        charts = load("build_charts")
+        self.assertEqual(charts.OUT.parent, pdf_dir)
+        self.assertEqual(charts.OUT_VREP.parent, pdf_dir)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

@@ -3,7 +3,7 @@
 
   python3 印刷用/build_kneeboard.py
 
-出力: 印刷用/ニーボード.pdf（A5（148×210mm）縦 2 ページ。両面で 1 枚）。中身は HTML を直す:
+出力: 印刷用/pdf/ニーボード.pdf（A5（148×210mm）縦 2 ページ。両面で 1 枚）。中身は HTML を直す:
   1 ページ目 印刷用/ニーボード.html      ①非常時
   2 ページ目 印刷用/ニーボード_手順.html R44 の手順（始動前〜停止。2026-11-04 に足した）
 2026-11-07、ユーザーの指定で、②空港は 空港一覧.html に分けて空港チャート（build_charts.py）の頭へ移し、
@@ -23,6 +23,8 @@ import fitz  # PyMuPDF
 ROOT = pathlib.Path(__file__).resolve().parent
 PAGES = ["ニーボード", "ニーボード_手順"]  # この順で 1 冊にする
 OUT_NAME = "ニーボード.pdf"
+# 刷る PDF はここにまとめる（外の入口 /pil/ はこのフォルダだけを見せる。2026-11-07、ユーザー「スクリプトが同じところにあると選びにくい」）
+PDF_DIR = ROOT / "pdf"
 
 CANDIDATES = [
     "~/.cache/ms-playwright/chromium_headless_shell-*/chrome-headless-shell-linux64/chrome-headless-shell",
@@ -57,8 +59,9 @@ def render(src: pathlib.Path, out: pathlib.Path) -> None:
     )
 
 
-def main(out_dir: pathlib.Path = ROOT) -> None:
+def main(out_dir: pathlib.Path = PDF_DIR) -> None:
     """out_dir はテストが一時ディレクトリを渡すため。"""
+    out_dir.mkdir(exist_ok=True)
     out = out_dir / OUT_NAME
     doc = fitz.open()
     with tempfile.TemporaryDirectory() as tmp:
